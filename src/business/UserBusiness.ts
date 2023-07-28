@@ -1,4 +1,5 @@
 import { UserDatabase } from '../database/UserDatabase';
+import { GetUserIdInputDTO } from '../dtos/users/getUserId.dto';
 import { LoginInputDTO } from '../dtos/users/login.dto';
 import { SignupInputDTO } from '../dtos/users/signup.dto';
 import { BadRequestError } from '../errors/BadRequestError';
@@ -52,17 +53,20 @@ export class UserBusiness {
 	};
 
 	public login = async (input: LoginInputDTO): Promise<string> => {
-		const { email, password} = input;
+		const { email, password } = input;
 		const userDB = await this.userDatabase.findUserByEmail(email);
 
 		if (!userDB) {
-			throw new NotFoundError("Email não encontrado");
+			throw new NotFoundError('Email não encontrado');
 		}
 
-		const isPasswordCorrect = await this.hashManager.compare(password, userDB.password);
+		const isPasswordCorrect = await this.hashManager.compare(
+			password,
+			userDB.password
+		);
 
 		if (!isPasswordCorrect) {
-			throw new BadRequestError("'Email' ou 'Senha' incorretos")
+			throw new BadRequestError("'Email' ou 'Senha' incorretos");
 		}
 
 		const user = new User(
@@ -71,15 +75,25 @@ export class UserBusiness {
 			userDB.email,
 			userDB.password,
 			userDB.created_at
-		)
+		);
 
 		const TokenPayload: TokenPayload = {
 			id: user.getId(),
-			nick: user.getNick()
-		}
+			nick: user.getNick(),
+		};
 
 		const token = this.tokenManager.createToken(TokenPayload);
 
 		return token;
-	}
+	};
+
+	public getUserId = async (input: GetUserIdInputDTO): Promise<string> => {
+		const payload = this.tokenManager.getPayload(input.token);
+
+		if (payload === null) {
+			throw new BadRequestError('Token inválido');
+		}
+
+		return payload.id;
+	};
 }

@@ -6,11 +6,11 @@ import {
 	GetPostsInputDTO,
 	GetPostsOutputDTO,
 } from '../dtos/posts/getPosts.dto';
-import { LikePostInputDTO } from '../dtos/posts/likePost.dto';
+import { LikePostInputDTO, LikeStatus } from '../dtos/posts/likePost.dto';
 import { BadRequestError } from '../errors/BadRequestError';
 import { NotFoundError } from '../errors/NotFoundError';
 import { LikesDislikes, PostLikeDB } from '../models/LikeDislike';
-import { Post, PostDB, PostDBGet } from '../models/Post';
+import { Post, PostDB, PostDBGet, PostModel } from '../models/Post';
 import { IdGenerator } from '../services/IdGenerator';
 import { TokenManager } from '../services/TokenManager';
 
@@ -122,7 +122,7 @@ export class PostBusiness {
 			throw new BadRequestError('Só quem criou o post pode deletá-lo');
 		}
 
-		await this.postDatabase.deletePost(id);
+		await this.postDatabase.deletePost(id, payload.id);
 	};
 
 	public likePost = async (input: LikePostInputDTO): Promise<void> => {
@@ -136,12 +136,6 @@ export class PostBusiness {
 		const post: PostDB = await this.postDatabase.getPostById(id);
 		if (!post) {
 			throw new NotFoundError('Post não encontrado');
-		}
-
-		if (post.creator_id === payload.id) {
-			throw new BadRequestError(
-				'Quem criou o post não pode dar like ou dislike no mesmo.'
-			);
 		}
 
 		const intLike = like ? 1 : 0;
@@ -163,5 +157,62 @@ export class PostBusiness {
 
 			await this.postDatabase.updateLikeDislike(newLikeDB);
 		}
+	};
+
+	public checkLike = async (
+		input: DeletePostInputDTO
+	): Promise<LikeStatus> => {
+		const { id, token } = input;
+
+		const payload = this.tokenManager.getPayload(token);
+		if (payload === null) {
+			throw new BadRequestError('Token inválido');
+		}
+
+		const post: PostDB = await this.postDatabase.getPostById(id);
+		if (!post) {
+			throw new NotFoundError('Post não encontrado');
+		}
+
+		const checkLike: PostLikeDB = await this.postDatabase.getLikesById(
+			payload.id,
+			id
+		);
+
+		if (!checkLike) {
+			return LikeStatus.None;
+		} else if (checkLike.like == 1) {
+			return LikeStatus.Like;
+		} else if (checkLike.like == 0) {
+			return LikeStatus.Dislike;
+		} else {
+			throw new NotFoundError('Não encontrado');
+		}
+	};
+
+	public getPostById = async (
+		input: DeletePostInputDTO
+	): Promise<PostModel> => {
+		const { id, token } = input;
+
+		const payload = this.tokenManager.getPayload(token);
+		if (payload === null) {
+			throw new BadRequestError('Token inválido');
+		}
+
+		const postDB: PostDBGet = await this.postDatabase.getPostById(id);
+		if (!postDB) {
+			throw new NotFoundError('Post não encontrado');
+		}
+
+		const post = new Post(
+			postDB.id,
+			postDB.creator_id,
+			postDB.content,
+			postDB.likes,
+			postDB.dislikes,
+			postDB.created_at
+		);
+		return post.toBusinessModel(postDB.nick, postDB.comments);
 	};
 }

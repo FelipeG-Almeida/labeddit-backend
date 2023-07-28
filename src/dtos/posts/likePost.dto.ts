@@ -1,5 +1,11 @@
 import z from 'zod';
 
+export enum LikeStatus {
+	None = 'none',
+	Like = 'like',
+	Dislike = 'dislike',
+}
+
 export interface LikePostInputDTO {
 	id: string;
 	token: string;

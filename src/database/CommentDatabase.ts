@@ -6,7 +6,7 @@ export class CommentDatabase extends BaseDataBase {
 	public static TABLE_COMMENTS = 'comments';
 	public static TABLE_LIKES_DISLIKES = 'comments_likes_dislikes';
 
-	public async getComments(): Promise<CommentDBGet[]> {
+	public async getComments(id: string): Promise<CommentDBGet[]> {
 		const comment: CommentDBGet[] = await BaseDataBase.connection(
 			CommentDatabase.TABLE_COMMENTS
 		)
@@ -39,7 +39,8 @@ export class CommentDatabase extends BaseDataBase {
 				'=',
 				'comments_likes_dislikes.comment_id'
 			)
-			.groupBy('comments.id');
+			.groupBy('comments.id')
+			.where('comments.post_id', '=', id);
 		return comment;
 	}
 
@@ -63,6 +64,9 @@ export class CommentDatabase extends BaseDataBase {
 	}
 
 	public async deleteComment(id: string): Promise<void> {
+		await BaseDataBase.connection(CommentDatabase.TABLE_LIKES_DISLIKES)
+			.del()
+			.where('comment_id', '=', id);
 		await BaseDataBase.connection(CommentDatabase.TABLE_COMMENTS)
 			.del()
 			.where({ id });
@@ -80,7 +84,9 @@ export class CommentDatabase extends BaseDataBase {
 		return likes;
 	}
 
-	public async insertLikeDislike(newCommentLike: CommentLikeDB): Promise<void> {
+	public async insertLikeDislike(
+		newCommentLike: CommentLikeDB
+	): Promise<void> {
 		await BaseDataBase.connection(
 			CommentDatabase.TABLE_LIKES_DISLIKES
 		).insert(newCommentLike);
@@ -96,7 +102,9 @@ export class CommentDatabase extends BaseDataBase {
 			.andWhere('comment_id', '=', commentId);
 	}
 
-	public async updateLikeDislike(commentLikeDB: CommentLikeDB): Promise<void> {
+	public async updateLikeDislike(
+		commentLikeDB: CommentLikeDB
+	): Promise<void> {
 		await BaseDataBase.connection(CommentDatabase.TABLE_LIKES_DISLIKES)
 			.update(commentLikeDB)
 			.where('user_id', '=', commentLikeDB.user_id)

@@ -13,11 +13,12 @@ export class CommentController {
 
 	public getComments = async (req: Request, res: Response) => {
 		try {
-			const token = getCommentsSchema.parse({
+			const input = getCommentsSchema.parse({
+				id: req.params.id,
 				token: req.headers.authorization,
 			});
 
-			const output = await this.commentBusiness.getComments(token);
+			const output = await this.commentBusiness.getComments(input);
 
 			res.status(200).send(output);
 		} catch (error) {
@@ -115,6 +116,29 @@ export class CommentController {
 			await this.commentBusiness.likeComment(input);
 
 			res.status(200).send();
+		} catch (error) {
+			console.log(error);
+
+			if (error instanceof ZodError) {
+				res.status(400).send(error.issues[0].message);
+			} else if (error instanceof BaseError) {
+				res.status(error.statusCode).send(error.message);
+			} else {
+				res.status(500).send('Erro inesperado');
+			}
+		}
+	};
+
+	public checkLike = async (req: Request, res: Response) => {
+		try {
+			const input = deleteCommentSchema.parse({
+				id: req.params.id,
+				token: req.headers.authorization,
+			});
+
+			const response = await this.commentBusiness.checkLike(input);
+
+			res.status(200).send(response);
 		} catch (error) {
 			console.log(error);
 

@@ -12,7 +12,9 @@ const postController = new PostController(
 );
 
 postRouter.get('/', postController.getPosts);
+postRouter.get('/:id', postController.getPostById);
 postRouter.post('/', postController.createPost);
 postRouter.put('/:id', postController.editPost);
 postRouter.delete('/:id', postController.deletePost);
 postRouter.put('/:id/like', postController.likePost);
+postRouter.get('/:id/checklike', postController.checkLike);

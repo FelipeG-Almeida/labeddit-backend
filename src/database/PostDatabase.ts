@@ -49,10 +49,46 @@ export class PostDatabase extends BaseDataBase {
 		return posts;
 	}
 
-	public async getPostById(id: string): Promise<PostDB> {
-		const [post]: PostDB[] = await BaseDataBase.connection(
+	public async getPostById(id: string): Promise<PostDBGet> {
+		const [post]: PostDBGet[] = await BaseDataBase.connection(
 			PostDatabase.TABLE_POSTS
-		).where({ id });
+		)
+			.select(
+				'posts.id',
+				'posts.creator_id',
+				'posts.content',
+				'posts.created_at',
+				'users.nick',
+				BaseDataBase.connection
+					.count('comments.id as comments')
+					.from(PostDatabase.TABLE_COMMENTS)
+					.whereRaw('comments.post_id = posts.id')
+					.as('comments'),
+				BaseDataBase.connection
+					.count('likes_dislikes.like as likes')
+					.from('likes_dislikes')
+					.whereRaw(
+						'likes_dislikes.post_id = posts.id and likes_dislikes.like = 1'
+					)
+					.as('likes'),
+				BaseDataBase.connection
+					.count('likes_dislikes.like as dislikes')
+					.from('likes_dislikes')
+					.whereRaw(
+						'likes_dislikes.post_id = posts.id and likes_dislikes.like = 0'
+					)
+					.as('dislikes')
+			)
+			.innerJoin('users', 'posts.creator_id', '=', 'users.id')
+			.leftJoin('comments', 'posts.id', '=', 'comments.post_id')
+			.leftJoin(
+				'likes_dislikes',
+				'posts.id',
+				'=',
+				'likes_dislikes.post_id'
+			)
+			.groupBy('posts.id')
+			.where('posts.id', '=', id);
 		return post;
 	}
 
@@ -68,10 +104,16 @@ export class PostDatabase extends BaseDataBase {
 			.where({ id: post.id });
 	}
 
-	public async deletePost(id: string): Promise<void> {
+	public async deletePost(id: string, creatorId: string): Promise<void> {
+		await BaseDataBase.connection(PostDatabase.TABLE_LIKES_DISLIKES)
+			.del()
+			.where({ post_id: id });
+		await BaseDataBase.connection(PostDatabase.TABLE_COMMENTS)
+			.del()
+			.where({ post_id: id });
 		await BaseDataBase.connection(PostDatabase.TABLE_POSTS)
 			.del()
-			.where({ id });
+			.where({ id, creator_id: creatorId });
 	}
 
 	public async getLikesById(

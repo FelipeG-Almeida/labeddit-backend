@@ -33,6 +33,29 @@ export class PostController {
 		}
 	};
 
+	public getPostById = async (req: Request, res: Response) => {
+		try {
+			const input = deletePostSchema.parse({
+				id: req.params.id,
+				token: req.headers.authorization,
+			});
+
+			const output = await this.postBusiness.getPostById(input);
+
+			res.status(200).send(output);
+		} catch (error) {
+			console.log(error);
+
+			if (error instanceof ZodError) {
+				res.status(400).send(error.issues[0].message);
+			} else if (error instanceof BaseError) {
+				res.status(error.statusCode).send(error.message);
+			} else {
+				res.status(500).send('Erro inesperado');
+			}
+		}
+	};
+
 	public createPost = async (req: Request, res: Response) => {
 		try {
 			const input = createPostSchema.parse({
@@ -114,6 +137,29 @@ export class PostController {
 			await this.postBusiness.likePost(input);
 
 			res.status(200).send();
+		} catch (error) {
+			console.log(error);
+
+			if (error instanceof ZodError) {
+				res.status(400).send(error.issues[0].message);
+			} else if (error instanceof BaseError) {
+				res.status(error.statusCode).send(error.message);
+			} else {
+				res.status(500).send('Erro inesperado');
+			}
+		}
+	};
+
+	public checkLike = async (req: Request, res: Response) => {
+		try {
+			const input = deletePostSchema.parse({
+				id: req.params.id,
+				token: req.headers.authorization,
+			});
+
+			const response = await this.postBusiness.checkLike(input);
+
+			res.status(200).send(response);
 		} catch (error) {
 			console.log(error);
 

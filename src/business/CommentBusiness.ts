@@ -6,7 +6,10 @@ import {
 	GetCommentsInputDTO,
 	GetCommentsOutputDTO,
 } from '../dtos/comments/getComment.dto';
-import { LikeCommentInputDTO } from '../dtos/comments/likeComment.dto';
+import {
+	LikeCommentInputDTO,
+	LikeStatus,
+} from '../dtos/comments/likeComment.dto';
 import { BadRequestError } from '../errors/BadRequestError';
 import { NotFoundError } from '../errors/NotFoundError';
 import { CommentLikeDB, LikesDislikes } from '../models/LikeDislike';
@@ -24,18 +27,20 @@ export class CommentBusiness {
 	public getComments = async (
 		input: GetCommentsInputDTO
 	): Promise<GetCommentsOutputDTO> => {
-		const payload = this.tokenManager.getPayload(input.token);
+		const { token, id } = input;
+		const payload = this.tokenManager.getPayload(token);
 
 		if (payload === null) {
 			throw new BadRequestError('Token inválido');
 		}
 
-		const commentsDB: CommentDBGet[] = await this.commentDatabase.getComments();
+		const commentsDB: CommentDBGet[] =
+			await this.commentDatabase.getComments(id);
 		const comments = commentsDB.map((commentDB) => {
 			const comment = new Comment(
 				commentDB.id,
 				commentDB.creator_id,
-                commentDB.post_id,
+				commentDB.post_id,
 				commentDB.content,
 				commentDB.likes,
 				commentDB.dislikes,
@@ -48,7 +53,9 @@ export class CommentBusiness {
 		return output;
 	};
 
-	public createComment = async (input: CreateCommentInputDTO): Promise<void> => {
+	public createComment = async (
+		input: CreateCommentInputDTO
+	): Promise<void> => {
 		const { postId, content, token } = input;
 
 		const payload = this.tokenManager.getPayload(token);
@@ -61,7 +68,7 @@ export class CommentBusiness {
 		const newComment = new Comment(
 			id,
 			payload.id,
-            postId,
+			postId,
 			content,
 			0,
 			0,
@@ -81,7 +88,9 @@ export class CommentBusiness {
 			throw new BadRequestError('Token inválido');
 		}
 
-		const comment: CommentDB = await this.commentDatabase.getCommentById(id);
+		const comment: CommentDB = await this.commentDatabase.getCommentById(
+			id
+		);
 
 		if (!comment) {
 			throw new NotFoundError('Comment não encontrado');
@@ -96,7 +105,7 @@ export class CommentBusiness {
 		const newComment = new Comment(
 			comment.id,
 			comment.creator_id,
-            comment.post_id,
+			comment.post_id,
 			content,
 			comment.likes,
 			comment.dislikes,
@@ -106,7 +115,9 @@ export class CommentBusiness {
 		await this.commentDatabase.editComment(newComment.toDBModel());
 	};
 
-	public deleteComment = async (input: DeleteCommentInputDTO): Promise<void> => {
+	public deleteComment = async (
+		input: DeleteCommentInputDTO
+	): Promise<void> => {
 		const { id, token } = input;
 
 		const payload = this.tokenManager.getPayload(token);
@@ -115,7 +126,9 @@ export class CommentBusiness {
 			throw new BadRequestError('Token inválido');
 		}
 
-		const comment: CommentDB = await this.commentDatabase.getCommentById(id);
+		const comment: CommentDB = await this.commentDatabase.getCommentById(
+			id
+		);
 
 		if (!comment) {
 			throw new NotFoundError('Comment não encontrado');
@@ -136,22 +149,16 @@ export class CommentBusiness {
 			throw new BadRequestError('Token inválido');
 		}
 
-		const comment: CommentDB = await this.commentDatabase.getCommentById(id);
+		const comment: CommentDB = await this.commentDatabase.getCommentById(
+			id
+		);
 		if (!comment) {
 			throw new NotFoundError('Comment não encontrado');
 		}
 
-		if (comment.creator_id === payload.id) {
-			throw new BadRequestError(
-				'Quem criou o comment não pode dar like ou dislike no mesmo.'
-			);
-		}
-
 		const intLike = like ? 1 : 0;
-		const checkLike: CommentLikeDB = await this.commentDatabase.getLikesById(
-			payload.id,
-			id
-		);
+		const checkLike: CommentLikeDB =
+			await this.commentDatabase.getLikesById(payload.id, id);
 
 		if (!checkLike) {
 			const newLike = new LikesDislikes(payload.id, id, like);
@@ -165,6 +172,37 @@ export class CommentBusiness {
 			const newLikeDB = newLike.toCommentDBModel();
 
 			await this.commentDatabase.updateLikeDislike(newLikeDB);
+		}
+	};
+
+	public checkLike = async (
+		input: DeleteCommentInputDTO
+	): Promise<LikeStatus> => {
+		const { id, token } = input;
+
+		const payload = this.tokenManager.getPayload(token);
+		if (payload === null) {
+			throw new BadRequestError('Token inválido');
+		}
+
+		const comment: CommentDB = await this.commentDatabase.getCommentById(
+			id
+		);
+		if (!comment) {
+			throw new NotFoundError('Comentário não encontrado');
+		}
+
+		const checkLike: CommentLikeDB =
+			await this.commentDatabase.getLikesById(payload.id, id);
+
+		if (!checkLike) {
+			return LikeStatus.None;
+		} else if (checkLike.like == 1) {
+			return LikeStatus.Like;
+		} else if (checkLike.like == 0) {
+			return LikeStatus.Dislike;
+		} else {
+			throw new NotFoundError('Não encontrado');
 		}
 	};
 }
