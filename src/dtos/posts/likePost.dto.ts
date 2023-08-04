@@ -12,8 +12,10 @@ export interface LikePostInputDTO {
 	like: boolean;
 }
 
-export const likePostChema = z.object({
-	id: z.string().min(1, { message: 'Id inválido' }),
-	token: z.string().min(1, { message: 'Token inválido' }),
-	like: z.boolean(),
-});
+export const likePostChema = z
+	.object({
+		id: z.string().min(1, { message: 'Id inválido' }),
+		token: z.string().min(1, { message: 'Token inválido' }),
+		like: z.boolean(),
+	})
+	.transform((data) => data as LikePostInputDTO);

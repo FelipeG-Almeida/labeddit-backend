@@ -23,12 +23,8 @@ export class UserBusiness {
 		const hash = await this.hashManager.hash(password);
 		const id = this.idGenerator.generate();
 
-		const userIdExists = await this.userDatabase.findUserById(id);
 		const userEmailExists = await this.userDatabase.findUserByEmail(email);
 
-		if (userIdExists) {
-			throw new BadRequestError("O 'id' já existe");
-		}
 		if (userEmailExists) {
 			throw new BadRequestError("O 'email' já existe");
 		}

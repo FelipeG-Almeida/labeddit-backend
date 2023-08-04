@@ -183,10 +183,8 @@ export class PostBusiness {
 			return LikeStatus.None;
 		} else if (checkLike.like == 1) {
 			return LikeStatus.Like;
-		} else if (checkLike.like == 0) {
-			return LikeStatus.Dislike;
 		} else {
-			throw new NotFoundError('Não encontrado');
+			return LikeStatus.Dislike;
 		}
 	};
 
